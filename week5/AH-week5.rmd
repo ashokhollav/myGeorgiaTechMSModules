@@ -1,0 +1,174 @@
+---
+title: "AH-week5"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Question 8.1
+Describe a situation or problem from your job, everyday life, current events, etc., for which a linear
+regression model would be appropriate. List some (up to 5) predictors that you might use.
+
+I would use linear regression to predict my retirement savings based on my current work and life committments
+I'd use the following predictors. 
+
+* Current Salary
+* Curent Monthly Spend
+* Monthly savings
+* Number of dependents
+* Market conditions
+
+I'd put more weight i.e. bias towards number of dependents, monthly savings and next to market conditions. May be I would use cusum to keep a check on my intended progress and course correct as required.
+
+
+
+## Question 8.2
+Using crime data from http://www.statsci.org/data/general/uscrime.txt (file uscrime.txt,
+description at http://www.statsci.org/data/general/uscrime.html ), use regression (a useful R function is
+lm or glm) to predict the observed crime rate in a city with the following data:
+
+* M = 14.0
+* So = 0
+* Ed = 10.0
+* Po1 = 12.0
+* Po2 = 15.5
+* LF = 0.640
+* M.F = 94.0
+* Pop = 150
+* NW = 1.1
+* U1 = 0.120
+* U2 = 3.6
+* Wealth = 3200
+* Ineq = 20.1
+* Prob = 0.04
+* Time = 39.0
+
+Show your model (factors used and their coefficients), the software output, and the quality of fit.
+Note that because there are only 47 data points and 15 predictors, you’ll probably notice some
+overfitting. We’ll see ways of dealing with this sort of problem later in the course.
+
+
+```{r}
+crime_data=read.table("http://www.statsci.org/data/general/uscrime.txt", header = TRUE)
+summary(crime_data)
+head(crime_data)
+
+```
+
+```{r}
+
+lm.crime <- lm(Crime~., data=crime_data)
+
+#Lets look at the Akaike's An Information Criterion and Bayesian Criterion ( AIC, BIC)
+
+AIC(lm.crime)
+BIC(lm.crime)
+```
+
+Lets look at the linear co-efficients
+```{r}
+summary(lm.crime)
+
+
+```
+
+In Linear Regression, the Null Hypothesis is that the coefficients associated with the variables is equal to zero. The alternate hypothesis is that the coefficients are not equal to zero (i.e. there exists a relationship between the independent variable in question and the dependent variable).
+
+Looking at the p-value of the coefficients, it seems the following predictors are more important in predicting Crime versus others
+
+* M
+* Ed
+* Ineq
+* Prob
+
+Thus we can safely reject the null hypothesis for these co-efficients
+
+For the other co-efficients, lets look at the t-statistic value. A larger t-value indicates that it is less likely that the coefficient is not equal to zero purely by chance. So, higher the t-value, the better.
+
+Putting the two together, we can reject the p-value's null hypothesis if the t-value is higher.
+The t-values of Po1 and U2 are >1 , hence we can reject the null hypothesis of the p-value for these two co-efficients and include them in our model
+
+So the final formula for our model is M+Ed+Ineq+Prob+Po1+U2
+
+Lets train a model with the above formula
+```{r}
+
+lm.final<-lm(Crime ~ M+Ed+Ineq+Prob+Po1+U2, data=crime_data)
+
+
+summary(lm.final)
+
+par(mfrow=c(2,2))
+plot(lm.final)
+
+```
+
+By looking at the residual plots above we can confirm that out residuals are random and shapeless, so the model may be a good fit and that our data is normally distributed.
+Also we dont have any influential cases as all of the cases are within the the dashed Cook’s distance line (last plot)
+
+Lets look at the AIC and BIC values
+
+```{r}
+
+AIC(lm.final)
+BIC(lm.final)
+
+
+
+```
+
+The AIC and BIC values for the final model is also lower than the model that we built earlier considering all the coefficients, hence this model is a better fit compared to the previous model with 15 predictors.
+
+
+The final linear regression model is: 
+Crime_Pred = -5040.50 + 105.02 * M + 196.47 * Ed+ 67.65 * Ineq + -3801.84 * Prob +  115.02 * Po1 + 89.37 * U2
+
+### Prediction
+Lets use the model to predict the Crime rate for the given data
+
+* M = 14.0
+* So = 0
+* Ed = 10.0
+* Po1 = 12.0
+* Po2 = 15.5
+* LF = 0.640
+* M.F = 94.0
+* Pop = 150
+* NW = 1.1
+* U1 = 0.120
+* U2 = 3.6
+* Wealth = 3200
+* Ineq = 20.1
+* Prob = 0.04
+* Time = 39.0
+
+```{r}
+
+#M+Ed+Ineq+Prob+Po1+U2
+testDf<-data.frame(M=14.0,Ed=10.0, Ineq=20.1,Prob=0.04,Po1=12.0,U2=3.6)
+
+testDf
+
+crime_rate<-predict(lm.final,testDf)
+
+crime_rate
+
+
+```
+
+
+```{r, echo=FALSE}
+
+#Lets normalize the data before proceeding
+
+#crime_scaled<-as.data.frame(scale(crime_data))
+#summary(crime_scaled)
+
+#library(GGally)
+#data1=cbind.data.frame(crime_data$M,crime_data$Ed,crime_data$Ineq,crime_data$Prob,crime_data$Po1,crime_data$U2,crime_data$Crime)
+
+#ggpairs(data=data1, title="Crime data 1:5", progress = FALSE )
+```
+
